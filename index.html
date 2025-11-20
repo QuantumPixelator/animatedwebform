@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<!-- Among The Stars, by Quantum Pixelator, MIT License -->
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Cosmic Contact Form – Shooting Stars</title>
+<style>
+  body, html {margin:0;padding:0;height:100%;overflow:hidden;background:#000;color:#fff;font-family:Arial,sans-serif;}
+  canvas {position:fixed;top:0;left:0;width:100%;height:100%;z-index:1;}
+  .form-container {position:relative;z-index:10;max-width:500px;margin:100px auto;padding:40px;background:rgba(0,0,0,0.7);border-radius:15px;backdrop-filter:blur(10px);box-shadow:0 0 30px rgba(100,150,255,0.4);}
+  button {width:100%;padding:14px;background:linear-gradient(45deg,#3a7bd5,#00d2ff);border:none;border-radius:8px;color:white;font-size:1.2em;cursor:pointer;}
+  #debug {position:fixed;top:10px;left:10px;z-index:999;background:rgba(200,0,0,0.8);padding:10px;border-radius:8px;font-size:14px;max-width:400px;}
+</style>
+</head>
+<body>
+
+<canvas id="bg"></canvas>
+
+<div class="form-container">
+  <h2 style="text-align:center;color:#a0d8ff;text-shadow:0 0 15px #00d2ff;">Contact Us Among the Stars</h2>
+  <form action="" method="get">
+    <label>Name</label>
+    <input type="text" name="name" placeholder="Your name" required style="width:100%;padding:12px;margin:10px 0;background:rgba(255,255,255,0.1);border:1px solid #4488ff;border-radius:8px;color:white;">
+    <label>Email</label>
+    <input type="email" name="email" placeholder="your@email.com" required style="width:100%;padding:12px;margin:10px 0;background:rgba(255,255,255,0.1);border:1px solid #4488ff;border-radius:8px;color:white;">
+    <label>Message</label>
+    <textarea name="message" rows="5" placeholder="Your message..." required style="width:100%;padding:12px;margin:10px 0;background:rgba(255,255,255,0.1);border:1px solid #4488ff;border-radius:8px;color:white;"></textarea>
+    <button type="submit">Send Message</button>
+  </form>
+</div>
+
+<!-- <div id="debug">Loading images...</div> -->
+
+<script>
+const canvas = document.getElementById('bg');
+const ctx = canvas.getContext('2d');
+let w = canvas.width = window.innerWidth;
+let h = canvas.height = window.innerHeight;
+
+window.addEventListener('resize', () => {
+  w = canvas.width = window.innerWidth;
+  h = canvas.height = window.innerHeight;
+});
+
+// Tiny stars
+const stars = [];
+for (let i = 0; i < 1200; i++) {
+  stars.push({
+    x: Math.random() * w,
+    y: Math.random() * h,
+    r: Math.random() * 0.5 + 0.1, 
+    s: Math.random() * 0.1 + 0.01 
+  });
+}
+
+// Shooting Stars
+const shootingStars = [];
+const SHOOTING_STAR_COUNT = 2; // How many shooting stars at once
+const SHOOTING_STAR_SPEED = 8; // How fast they move
+const SHOOTING_STAR_LENGTH = 30; // How long the trail is
+
+function createShootingStar() {
+    shootingStars.push({
+        x: w + Math.random() * w, // Start off-screen right
+        y: Math.random() * h,     // Random height
+        len: SHOOTING_STAR_LENGTH,
+        speed: SHOOTING_STAR_SPEED + Math.random() * 5, // Slightly varied speed
+        alpha: 1 // Start fully opaque
+    });
+}
+
+// Populate initial shooting stars
+for (let i = 0; i < SHOOTING_STAR_COUNT; i++) {
+    createShootingStar();
+}
+
+
+// Setup objects with initial random positions
+const planets = [
+  {name: "earth.png", size: 100, x: -Math.random() * 3, y: Math.random(), dx: 0.0004, rot: 0.0012},
+  {name: "mars.png",  size: 68,  x: 1 + Math.random() * 3, y: Math.random(), dx: -0.0005, rot: 0.0050},
+  {name: "moon.png",  size: 56,  x: -Math.random() * 3, y: Math.random(), dx: 0.0006, rot: -0.001},
+  {name: "ufo.png",   size: 14,  x: -Math.random() * 3, y: Math.random(), dx: 0.0013, rot: 0.0008, history: []} 
+];
+
+let loadedCount = 0;
+const debug = document.getElementById('debug');
+
+planets.forEach(p => {
+  const img = new Image();
+  img.src = p.name + "?t=" + Date.now(); 
+
+  img.onload = () => {
+    p.img = img;
+    loadedCount++;
+    updateDebug();
+  };
+
+  img.onerror = () => {
+    loadedCount++;
+    p.img = null; 
+    updateDebug();
+  };
+});
+
+function updateDebug() {
+  if (loadedCount < planets.length) {
+    <!-- debug.innerHTML = `Loading images... ${loadedCount}/${planets.length}`; -->
+  } else {
+    debug.style.background = 'rgba(0,100,0,0.8)';
+    <!-- debug.innerHTML = "All 4 images loaded successfully! ✔"; -->
+    setTimeout(() => debug.style.display = 'none', 3000);
+  }
+}
+
+let t = 0;
+function draw() {
+  ctx.clearRect(0, 0, w, h);
+
+  // Draw Stars
+  stars.forEach(s => {
+    s.x += s.s;
+    if (s.x > w) s.x = 0; 
+    ctx.fillStyle = '#fff';
+    ctx.globalAlpha = 0.5 + Math.sin(t*0.01)*0.15; 
+    ctx.fillRect(s.x, s.y, s.r*2, s.r*2);
+  });
+
+  // Draw Shooting Stars
+  for (let i = shootingStars.length - 1; i >= 0; i--) {
+    const star = shootingStars[i];
+    star.x -= star.speed;
+    star.alpha -= 0.01; // Fade out
+
+    ctx.globalAlpha = Math.max(0, star.alpha); // Ensure alpha doesn't go below 0
+    ctx.fillStyle = 'rgba(255, 255, 255, 1)'; // White core
+    ctx.beginPath();
+    ctx.arc(star.x, star.y, 1.5, 0, Math.PI * 2); // Small head
+    ctx.fill();
+
+    // Draw the tail
+    ctx.strokeStyle = `rgba(255, 255, 255, ${star.alpha * 0.8})`;
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(star.x, star.y);
+    ctx.lineTo(star.x + star.len, star.y); // Tail extends to the right
+    ctx.stroke();
+
+    // Remove if off screen and faded, then create a new one
+    if (star.x < -star.len || star.alpha <= 0) {
+      shootingStars.splice(i, 1);
+      createShootingStar(); // Create a new one when one leaves/fades
+    }
+  }
+  ctx.globalAlpha = 1; // Reset globalAlpha for other elements
+
+
+  // Draw Planets & UFO
+  planets.forEach(p => {
+    p.x += p.dx;
+
+    if (p.dx > 0 && p.x > 1.2) {
+        p.x = -0.5 - (Math.random() * 2); 
+        p.y = Math.random();             
+        if (p.history) p.history = [];   
+    }
+
+    if (p.dx < 0 && p.x < -0.2) {
+        p.x = 1.5 + (Math.random() * 2); 
+        p.y = Math.random();              
+    }
+
+    const px = p.x * w;
+    const py = p.y * h;
+
+    // UFO Trail
+    if (p.name === "ufo.png") {
+      p.history.push({ x: px, y: py });
+      if (p.history.length > 20) p.history.shift();
+
+      for (let i = 0; i < p.history.length; i++) {
+        const pos = p.history[i];
+        const alpha = (i / p.history.length) * 0.3; 
+        const size = (i / p.history.length) * 4; 
+        ctx.fillStyle = `rgba(0, 200, 255, ${alpha})`;
+        ctx.beginPath();
+        ctx.arc(pos.x, pos.y, size, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    ctx.save();
+    ctx.translate(px, py);
+    ctx.rotate(t * p.rot);
+
+    if (p.img) {
+      ctx.shadowBlur = 2; 
+      ctx.shadowColor = '#55aaff'; 
+      ctx.drawImage(p.img, -p.size/2, -p.size/2, p.size, p.size);
+    } else {
+      ctx.fillStyle = '#c33';
+      ctx.fillRect(-p.size/2, -p.size/2, p.size, p.size);
+      ctx.fillStyle = '#fff';
+      ctx.font = '14px Arial';
+      ctx.textAlign = 'center';
+      ctx.fillText("NOT FOUND", 0, -10);
+      ctx.fillText(p.name, 0, 15);
+    }
+    ctx.restore();
+  });
+
+  t++;
+  requestAnimationFrame(draw);
+}
+
+draw();
+</script>
+</body>
+</html>
